@@ -6,6 +6,7 @@ import java.util.ResourceBundle;
 
 import io.netty.handler.codec.serialization.ObjectDecoderInputStream;
 import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
@@ -50,7 +51,7 @@ public class ChatController implements Initializable {
                 while (true) {
                     try {
                         ChatUnitMessage message = (ChatUnitMessage) is.readObject();
-                        listView.getItems().add(message.toString());
+                        addMessage(message.toString());
                     } catch (Exception e) {
                         LOG.error("e = ", e);
                         break;
@@ -60,5 +61,9 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             LOG.error("e = ", e);
         }
+    }
+
+    private void addMessage(String msg) {
+        Platform.runLater(() -> listView.getItems().add(msg));
     }
 }
