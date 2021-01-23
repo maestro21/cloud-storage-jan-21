@@ -8,6 +8,7 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,7 +24,7 @@ public class NioServer {
     private Path serverPath = Paths.get("serverDir");
 
     public NioServer() throws IOException {
-        serverChannel.bind(new InetSocketAddress(8189));
+        serverChannel.bind(new InetSocketAddress("localhost", 8189));
         serverChannel.configureBlocking(false);
         serverChannel.register(selector, SelectionKey.OP_ACCEPT);
         while (serverChannel.isOpen()) {
@@ -59,28 +60,82 @@ public class NioServer {
             buffer.clear();
         }
         String command = msg.toString().replaceAll("[\n|\r]", "");
+        String[] args = command.split(" ");
+
+        if(!command.isEmpty()) {
+            System.out.println("Received command: " + command);
+        }
+
         if (command.equals("ls")) {
+            response("Showing files in directory " + serverPath, channel);
             String files = Files.list(serverPath)
                     .map(path -> path.getFileName().toString())
                     .collect(Collectors.joining(", "));
             files += "\n";
-            channel.write(ByteBuffer.wrap(files.getBytes(StandardCharsets.UTF_8)));
+            response(files, channel);
         }
+
         if (command.startsWith("cd")) {
-            String[] args = command.split(" ");
             if (args.length != 2) {
-                channel.write(ByteBuffer.wrap("Wrong command\n".getBytes(StandardCharsets.UTF_8)));
+                response("Wrong argument count", channel);
             } else {
+                response("Changing server path to: " + serverPath, channel);
                 String targetPath = args[1];
                 Path serverDirBefore = serverPath;
                 serverPath = serverPath.resolve(targetPath);
-                if (!Files.isDirectory(serverPath) && !Files.exists(serverPath)) {
-                    channel.write(ByteBuffer.wrap("Wrong arg for cd command\n".getBytes(StandardCharsets.UTF_8)));
+                if (!Files.isDirectory(serverPath)) {
+                    response(targetPath + " is not a directory", channel);
                     serverPath = serverDirBefore;
+                }  else if(!Files.exists(serverPath)) {
+                    response("Directory " + targetPath + " don`t exist", channel);
+                    serverPath = serverDirBefore;
+                } else {
+                    response("Successfully changed server path to: " + serverPath, channel);
                 }
             }
         }
 
+        if (command.startsWith("cat")) {
+            if (args.length != 2) {
+                response("Wrong argument count", channel);
+            } else {
+                String targetPath = args[1];
+                response("Creating directory " + targetPath, channel);
+                try {
+                    Path path = serverPath.resolve(targetPath);
+                    Files.createDirectory(path);
+                    response("Directory " + targetPath + " created successfully", channel);
+                } catch(FileAlreadyExistsException e){
+                    response("File or directory already exists", channel);
+                } catch (IOException e) {
+                    response("Error occurred: " + e.getMessage(), channel);
+                }
+            }
+        }
+
+        if (command.startsWith("touch")) {
+            if (args.length != 2) {
+                response("Wrong argument count", channel);
+            } else {
+                String targetPath = args[1];
+                response("Creating file " + targetPath, channel);
+                try {
+                    Path path = serverPath.resolve(targetPath);
+                    Files.createFile(path);
+                    response("File " + targetPath + " created successfully", channel);
+                } catch(FileAlreadyExistsException e){
+                    response("File or directory already exists", channel);
+                } catch (IOException e) {
+                    response("Error occurred: " + e.getMessage(), channel);
+                }
+            }
+        }
+    }
+
+    private void response(String str, SocketChannel channel) throws IOException {
+        str += "\n";
+        System.out.println("Sending response: " + str);
+        channel.write(ByteBuffer.wrap(str.getBytes(StandardCharsets.UTF_8)));
     }
 
     private void handleAccept(SelectionKey key) throws IOException {

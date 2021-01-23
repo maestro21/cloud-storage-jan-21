@@ -13,28 +13,37 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import model.ChatUnitMessage;
 import model.UserConstants;
+import niofilesystem.NFSResponse;
+import niofilesystem.NioFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ChatController implements Initializable {
+public class FileSystemController implements Initializable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ChatController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(FileSystemController.class);
 
     public ListView<String> listView;
+    public ListView<String> clientFileList;
+    public ListView<String> serverFileList;
+    private NioFileSystem fileSystem = new NioFileSystem("filesClient");;
 
     public TextField text;
 
     private ObjectEncoderOutputStream os;
     private ObjectDecoderInputStream is;
 
-    public void sendMessage(ActionEvent event) throws IOException {
+    public void sendMessage(ActionEvent event) throws IOException  {
         String messageContent = text.getText();
-        LocalDateTime sendAt = LocalDateTime.now();
+        sendMessageToServer(messageContent);
         text.clear();
+    }
+
+    private void sendMessageToServer(String msg) throws IOException  {
+        LocalDateTime sendAt = LocalDateTime.now();
         os.writeObject(
                 new ChatUnitMessage(
                         UserConstants.DEFAULT_SENDER_NAME,
-                        messageContent,
+                        msg,
                         sendAt)
         );
         os.flush();
@@ -42,6 +51,8 @@ public class ChatController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        NFSResponse resp = fileSystem.ls();
+        updateFileList(clientFileList, resp.getFilesList());
         try {
             Socket socket = new Socket("localhost", 8189);
             os = new ObjectEncoderOutputStream(socket.getOutputStream());
@@ -50,8 +61,11 @@ public class ChatController implements Initializable {
             new Thread(() -> {
                 while (true) {
                     try {
-                        ChatUnitMessage message = (ChatUnitMessage) is.readObject();
-                        addMessage(message.toString());
+                        NFSResponse response = (NFSResponse) is.readObject();
+                        addMessage(response.getMessage());
+                        if(response.getFilesList() != null) {
+                            updateFileList(serverFileList, response.getFilesList());
+                        }
                     } catch (Exception e) {
                         LOG.error("e = ", e);
                         break;
@@ -61,7 +75,24 @@ public class ChatController implements Initializable {
         } catch (Exception e) {
             LOG.error("e = ", e);
         }
+
+        try {
+            sendMessageToServer("ls");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
+
+
+    private void updateFileList(ListView<String> fileList, String[] files) {
+        Platform.runLater(() -> {
+            fileList.getItems().clear();
+            for (String file : files) {
+                fileList.getItems().add(file.trim());
+            }
+        });
+    }
+
 
     private void addMessage(String msg) {
         Platform.runLater(() -> listView.getItems().add(msg));

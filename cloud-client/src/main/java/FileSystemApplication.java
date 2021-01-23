@@ -4,13 +4,13 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 
-public class ChatApplication extends Application {
+public class FileSystemApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Parent parent = FXMLLoader.load(getClass().getResource("chatLayout.fxml"));
+        Parent parent = FXMLLoader.load(getClass().getResource("fileSystemLayout.fxml"));
         primaryStage.setScene(new Scene(parent));
-        primaryStage.setTitle("Чат");
+        primaryStage.setTitle("Client-Server file system");
         primaryStage.show();
     }
 }

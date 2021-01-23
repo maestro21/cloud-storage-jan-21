@@ -30,7 +30,7 @@ public class NettyServer {
                             channel.pipeline().addLast(
                                     new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
                                     new ObjectEncoder(),
-                                    new ChatUnitHandler());
+                                    new FileRequestHandler());
                         }
                     });
             ChannelFuture future = bootstrap.bind(8189).sync();
