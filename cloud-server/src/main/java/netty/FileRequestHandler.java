@@ -9,12 +9,11 @@ import java.util.stream.Collectors;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import model.ChatUnitMessage;
-import model.UserConstants;
+import model.Message;
 import niofilesystem.NFSResponse;
 import niofilesystem.NioFileSystem;
 
-public class FileRequestHandler extends SimpleChannelInboundHandler<ChatUnitMessage> {
+public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
     private static final ConcurrentLinkedDeque<ChannelHandlerContext> clients = new ConcurrentLinkedDeque<>();
 
@@ -26,8 +25,8 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<ChatUnitMess
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, ChatUnitMessage msg) throws Exception {
-        String command = msg.getMessageContent();
+    protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws Exception {
+        String command = msg.getContent();
         String[] args = command.split(" ");
         NFSResponse response = new NFSResponse(command);
 

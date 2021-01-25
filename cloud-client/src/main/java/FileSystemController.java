@@ -11,8 +11,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
-import model.ChatUnitMessage;
-import model.UserConstants;
+import model.Message;
 import niofilesystem.NFSResponse;
 import niofilesystem.NioFileSystem;
 import org.slf4j.Logger;
@@ -39,13 +38,7 @@ public class FileSystemController implements Initializable {
     }
 
     private void sendMessageToServer(String msg) throws IOException  {
-        LocalDateTime sendAt = LocalDateTime.now();
-        os.writeObject(
-                new ChatUnitMessage(
-                        UserConstants.DEFAULT_SENDER_NAME,
-                        msg,
-                        sendAt)
-        );
+        os.writeObject(new Message(msg));
         os.flush();
     }
 
