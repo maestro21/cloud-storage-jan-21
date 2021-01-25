@@ -75,4 +75,9 @@ public class NioFileSystem {
             return error(e.getMessage());
         }
     }
+
+    public boolean isDir(String targetPath) {
+        Path path = filePath.resolve(targetPath);
+        return Files.isDirectory(path);
+    }
 }

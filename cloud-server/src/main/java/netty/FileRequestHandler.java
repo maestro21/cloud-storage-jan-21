@@ -58,6 +58,20 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
             }
         }
 
+        if (command.startsWith("open")) {
+            if (args.length != 2) {
+                response = fs.error("Wrong argument count");
+            } else {
+                String fileName = args[1];
+
+                if(fs.isDir(fileName)) {
+                    response = fs.cd(args[1]);
+                } else {
+                    //TODO: implement download
+                }
+            }
+        }
+
         for (ChannelHandlerContext client : clients) {
             client.writeAndFlush(response);
         }

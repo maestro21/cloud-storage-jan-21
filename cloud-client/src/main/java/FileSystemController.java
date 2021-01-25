@@ -31,21 +31,52 @@ public class FileSystemController implements Initializable {
     private ObjectEncoderOutputStream os;
     private ObjectDecoderInputStream is;
 
-    public void sendMessage(ActionEvent event) throws IOException  {
+    public void sendMessage(ActionEvent event) {
         String messageContent = text.getText();
         sendMessageToServer(messageContent);
         text.clear();
     }
 
-    private void sendMessageToServer(String msg) throws IOException  {
-        os.writeObject(new Message(msg));
-        os.flush();
+    private void sendMessageToServer(String msg)  {
+        try {
+            os.writeObject(new Message(msg));
+            os.flush();
+        } catch (IOException e) {
+            addMessage("Error occurred: " + e.getMessage());
+        }
     }
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         NFSResponse resp = fileSystem.ls();
         updateFileList(clientFileList, resp.getFilesList());
+        bindMouseClicks();
+        bindConnection();
+        sendMessageToServer("ls");
+    }
+
+    private void bindMouseClicks() {
+        clientFileList.setOnMouseClicked(a -> {
+            if (a.getClickCount() == 2) {
+                String fileName = clientFileList.getSelectionModel().getSelectedItem();
+                // TODO: implement upload
+                if(fileSystem.isDir(fileName)) {
+                    sendMessageToServer("cat " + fileName);
+                } else {
+                    sendMessageToServer("touch " + fileName);
+                }
+            }
+        });
+
+        serverFileList.setOnMouseClicked(a -> {
+            if (a.getClickCount() == 2) {
+                String fileName = serverFileList.getSelectionModel().getSelectedItem();
+                sendMessageToServer("open " + fileName);
+            }
+        });
+    }
+
+    private void bindConnection() {
         try {
             Socket socket = new Socket("localhost", 8189);
             os = new ObjectEncoderOutputStream(socket.getOutputStream());
@@ -67,12 +98,6 @@ public class FileSystemController implements Initializable {
             }).start();
         } catch (Exception e) {
             LOG.error("e = ", e);
-        }
-
-        try {
-            sendMessageToServer("ls");
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
