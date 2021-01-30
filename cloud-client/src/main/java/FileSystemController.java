@@ -24,7 +24,7 @@ public class FileSystemController implements Initializable {
     public ListView<String> listView;
     public ListView<String> clientFileList;
     public ListView<String> serverFileList;
-    private NioFileSystem fileSystem = new NioFileSystem("filesClient");;
+    final private NioFileSystem fs = new NioFileSystem("filesClient");;
 
     public TextField text;
 
@@ -48,10 +48,12 @@ public class FileSystemController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        NFSResponse resp = fileSystem.ls();
+        NFSResponse resp = fs.ls();
+        // display client file list
         updateFileList(clientFileList, resp.getFilesList());
         bindMouseClicks();
         bindConnection();
+        // retrieve from server root dir file list
         sendMessageToServer("ls");
     }
 
@@ -60,10 +62,10 @@ public class FileSystemController implements Initializable {
             if (a.getClickCount() == 2) {
                 String fileName = clientFileList.getSelectionModel().getSelectedItem();
                 // TODO: implement upload
-                if(fileSystem.isDir(fileName)) {
+                if(fs.isDir(fileName)) {
                     sendMessageToServer("cat " + fileName);
                 } else {
-                    sendMessageToServer("touch " + fileName);
+                    sendMessageToServer("upload " + fileName);
                 }
             }
         });
@@ -86,10 +88,7 @@ public class FileSystemController implements Initializable {
                 while (true) {
                     try {
                         NFSResponse response = (NFSResponse) is.readObject();
-                        addMessage(response.getMessage());
-                        if(response.getFilesList() != null) {
-                            updateFileList(serverFileList, response.getFilesList());
-                        }
+                        handleResponse(response);
                     } catch (Exception e) {
                         LOG.error("e = ", e);
                         break;
@@ -101,6 +100,16 @@ public class FileSystemController implements Initializable {
         }
     }
 
+    private void handleResponse(NFSResponse response) {
+        // вот сюда должны приходить куски скачеваемого файла по идее?
+        // handle message
+        String message = response.getMessage();
+        String[] args = message.split(" ");
+        addMessage(message);
+        if(response.getFilesList() != null) {
+            updateFileList(serverFileList, response.getFilesList());
+        }
+    }
 
     private void updateFileList(ListView<String> fileList, String[] files) {
         Platform.runLater(() -> {

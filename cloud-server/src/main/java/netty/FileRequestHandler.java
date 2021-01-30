@@ -65,9 +65,9 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
                 String fileName = args[1];
 
                 if(fs.isDir(fileName)) {
-                    response = fs.cd(args[1]);
+                   response = fs.cd(fileName);
                 } else {
-                    //TODO: implement download
+                   transferFile(fileName);
                 }
             }
         }
@@ -75,6 +75,12 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
         for (ChannelHandlerContext client : clients) {
             client.writeAndFlush(response);
         }
+    }
+
+
+    private void transferFile(String fileName) {
+        /// ???? ChunkedFile? как отправить чанки в респонс?
+        // foreach(chunk)   client.writeAndFlush(chunk); ?
     }
 
     @Override
