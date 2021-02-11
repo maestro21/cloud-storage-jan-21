@@ -1,3 +1,5 @@
+package model;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -5,17 +7,16 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Arrays;
 
-public class FileMessage implements Serializable {
+public class FileMessage extends Message {
 
     private final String name;
     private final byte[] data;
-    private final LocalDate createAt;
-    private boolean end;
+    private final int kb;
 
-    public FileMessage(Path path) throws IOException {
-        name = path.getFileName().toString();
-        data = Files.readAllBytes(path);
-        createAt = LocalDate.now();
+    public FileMessage(String name, byte[] data, int kb) throws IOException {
+        this.name = name;
+        this.data = data;
+        this.kb = kb;
     }
 
     public String getName() {
@@ -26,16 +27,14 @@ public class FileMessage implements Serializable {
         return data;
     }
 
-    public LocalDate getCreateAt() {
-        return createAt;
-    }
+    public int getKb() { return kb; }
 
     @Override
     public String toString() {
-        return "FileMessage{" +
+        return "model.FileMessage{" +
                 "name='" + name + '\'' +
                 ", data=" + Arrays.toString(data) +
-                ", createAt=" + createAt +
+                ", kb=" + kb +
                 '}';
     }
 }
