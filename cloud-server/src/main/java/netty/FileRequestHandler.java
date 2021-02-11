@@ -9,6 +9,8 @@ import java.util.stream.Collectors;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import model.CommandMessage;
+import model.FileMessage;
 import model.Message;
 import niofilesystem.NFSResponse;
 import niofilesystem.NioFileSystem;
@@ -26,6 +28,32 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws Exception {
+        NFSResponse response = null;
+        if (msg instanceof FileMessage) {
+            response = fs.put((FileMessage) msg);
+        } else if (msg instanceof CommandMessage) {
+            response = handleCommandMessage((CommandMessage) msg);
+        }
+
+        if(response != null) {
+            writeToChannel(response);
+        }
+    }
+
+    private void writeToChannel(NFSResponse msg) {
+        for (ChannelHandlerContext client : clients) {
+            client.writeAndFlush(msg);
+        }
+    }
+
+    private void writeToChannel(FileMessage msg) {
+        for (ChannelHandlerContext client : clients) {
+            client.writeAndFlush(msg);
+        }
+    }
+
+
+    private NFSResponse handleCommandMessage(CommandMessage msg) {
         String command = msg.getContent();
         String[] args = command.split(" ");
         NFSResponse response = new NFSResponse(command);
@@ -38,7 +66,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
             if (args.length != 2) {
                 response = fs.error("Wrong argument count");
             } else {
-               response = fs.cd(args[1]);
+                response = fs.cd(args[1]);
             }
         }
 
@@ -64,23 +92,14 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
             } else {
                 String fileName = args[1];
 
-                if(fs.isDir(fileName)) {
+                if (fs.isDir(fileName)) {
                    response = fs.cd(fileName);
                 } else {
-                   transferFile(fileName);
+                    response = fs.transfer(fileName, fm -> writeToChannel(fm) );
                 }
             }
         }
-
-        for (ChannelHandlerContext client : clients) {
-            client.writeAndFlush(response);
-        }
-    }
-
-
-    private void transferFile(String fileName) {
-        /// ???? ChunkedFile? как отправить чанки в респонс?
-        // foreach(chunk)   client.writeAndFlush(chunk); ?
+        return response;
     }
 
     @Override

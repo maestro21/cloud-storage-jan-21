@@ -1,11 +1,17 @@
 package niofilesystem;
 
+import model.FileMessage;
+
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.*;
 import java.util.stream.Collectors;
+
 
 public class NioFileSystem {
 
@@ -58,6 +64,44 @@ public class NioFileSystem {
             return success("Directory " + targetPath + " created successfully");
         } catch(FileAlreadyExistsException e){
             return error("File or directory already exists");
+        } catch (IOException e) {
+            return error(e.getMessage());
+        }
+    }
+
+    public NFSResponse put(FileMessage msg) {
+        try {
+            Files.write(
+                Paths.get(msg.getName()),
+                msg.getData(),
+                StandardOpenOption.APPEND);
+            return success(msg.getKb() + "kb transferred");
+        } catch (IOException e) {
+            return error(e.getMessage());
+        }
+    }
+
+    public NFSResponse transfer(String file, FMCallback callback) {
+
+        try {
+            RandomAccessFile aFile = new RandomAccessFile(file, "r");
+
+            FileChannel inChannel = aFile.getChannel();
+
+            ByteBuffer buffer = ByteBuffer.allocate(1024);
+            int i = 0;
+            while (inChannel.read(buffer) > 0) {
+                i++;
+                buffer.flip();
+                FileMessage fm = new FileMessage(file, buffer.array(), i);
+                callback.call(fm);
+                buffer.clear();
+            }
+
+            inChannel.close();
+            aFile.close();
+
+            return success("Transferring file " + file);
         } catch (IOException e) {
             return error(e.getMessage());
         }
