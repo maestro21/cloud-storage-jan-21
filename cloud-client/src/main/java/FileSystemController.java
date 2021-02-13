@@ -9,6 +9,7 @@ import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import model.CommandMessage;
@@ -23,6 +24,7 @@ public class FileSystemController implements Initializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileSystemController.class);
 
+    public Label nickname;
     public ListView<String> listView;
     public ListView<String> clientFileList;
     public ListView<String> serverFileList;
@@ -58,6 +60,15 @@ public class FileSystemController implements Initializable {
             addMessage("Error occurred: " + e.getMessage());
         }
     }
+
+    public String getNickname() {
+        return this.nickname.getText();
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname.setText(nickname);
+    }
+
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
