@@ -95,7 +95,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
                 if (fs.isDir(fileName)) {
                    response = fs.cd(fileName);
                 } else {
-                    response = fs.transfer(fileName, fm -> writeToChannel(fm) );
+                    response = fs.transfer(fileName, this::writeToChannel);
                 }
             }
         }

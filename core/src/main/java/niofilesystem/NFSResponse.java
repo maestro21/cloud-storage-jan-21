@@ -1,8 +1,8 @@
 package niofilesystem;
 
-import java.io.Serializable;
+import model.Message;
 
-public class NFSResponse implements Serializable {
+public class NFSResponse extends Message {
 
     private String message;
 

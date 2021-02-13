@@ -11,6 +11,8 @@ import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import model.CommandMessage;
+import model.FileMessage;
 import model.Message;
 import niofilesystem.NFSResponse;
 import niofilesystem.NioFileSystem;
@@ -37,10 +39,21 @@ public class FileSystemController implements Initializable {
         text.clear();
     }
 
+    private void sendFileToServer(FileMessage fm)  {
+        try {
+            os.writeObject(fm);
+            os.flush();
+            addMessage("Uploading " + fm.getName() + ": " + fm.getKb() + "kb transferred");
+        } catch (IOException e) {
+            addMessage("Error occurred on upload" + fm.getName() + ": " + e.getMessage());
+        }
+    }
+
     private void sendMessageToServer(String msg)  {
         try {
-            os.writeObject(new Message(msg));
+            os.writeObject(new CommandMessage(msg));
             os.flush();
+            addMessage("Sent command to server: " + msg);
         } catch (IOException e) {
             addMessage("Error occurred: " + e.getMessage());
         }
@@ -61,11 +74,11 @@ public class FileSystemController implements Initializable {
         clientFileList.setOnMouseClicked(a -> {
             if (a.getClickCount() == 2) {
                 String fileName = clientFileList.getSelectionModel().getSelectedItem();
-                // TODO: implement upload
                 if(fs.isDir(fileName)) {
-                    sendMessageToServer("cat " + fileName);
+                    sendMessageToServer("cat " + fs.trimBrackets(fileName));
                 } else {
-                    sendMessageToServer("upload " + fileName);
+                   NFSResponse resp = fs.transfer(fileName, this::sendFileToServer);
+                   addMessage(resp.getMessage());
                 }
             }
         });
@@ -87,7 +100,7 @@ public class FileSystemController implements Initializable {
             new Thread(() -> {
                 while (true) {
                     try {
-                        NFSResponse response = (NFSResponse) is.readObject();
+                        Message response = (Message) is.readObject();
                         handleResponse(response);
                     } catch (Exception e) {
                         LOG.error("e = ", e);
@@ -100,14 +113,16 @@ public class FileSystemController implements Initializable {
         }
     }
 
-    private void handleResponse(NFSResponse response) {
-        // вот сюда должны приходить куски скачеваемого файла по идее?
-        // handle message
-        String message = response.getMessage();
-        String[] args = message.split(" ");
-        addMessage(message);
-        if(response.getFilesList() != null) {
-            updateFileList(serverFileList, response.getFilesList());
+    private void handleResponse(Message msg) {
+        if (msg instanceof FileMessage) {
+            NFSResponse resp = fs.put((FileMessage) msg);
+            addMessage("Downloading " + resp.getMessage());
+        } else if (msg instanceof NFSResponse) {
+            String message = ((NFSResponse) msg).getMessage();
+            addMessage(message);
+            if(((NFSResponse) msg).getFilesList() != null) {
+                updateFileList(serverFileList, ((NFSResponse) msg).getFilesList());
+            }
         }
     }
 
@@ -119,7 +134,6 @@ public class FileSystemController implements Initializable {
             }
         });
     }
-
 
     private void addMessage(String msg) {
         Platform.runLater(() -> listView.getItems().add(msg));

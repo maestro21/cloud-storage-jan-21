@@ -10,6 +10,7 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
+import java.util.Comparator;
 import java.util.stream.Collectors;
 
 
@@ -36,12 +37,38 @@ public class NioFileSystem {
     public NFSResponse ls() {
         try {
             String files = Files.list(filePath)
-                .map(path -> path.getFileName().toString())
+                .sorted(this::sortDirsFirstThenByName)
+                .map(this::getFileName)
                 .collect(Collectors.joining(", "));
             return new NFSResponse("Listing files in directory " + filePath.toString(), files);
         } catch (IOException e) {
             return error(e.getMessage());
         }
+    }
+
+    private int sortDirsFirstThenByName(Path p1, Path p2) {
+        String p1Fname = p1.getFileName().toString();
+        String p2Fname = p2.getFileName().toString();
+        boolean isP1Dir = isDir(p1Fname);
+        boolean isP2Dir = isDir(p2Fname);
+
+        if(isP1Dir == isP2Dir) {
+            return p1Fname.compareTo(p2Fname);
+        } else {
+            return Boolean.compare(isP2Dir, isP1Dir);
+        }
+    }
+
+    private String getFileName(Path targetPath) {
+        String filename = targetPath.getFileName().toString();
+        if (isDir(filename)) {
+            filename = "[" + filename + "]";
+        }
+        return filename;
+    }
+
+    public String trimBrackets(String string) {
+        return string.replaceAll("^\\[|\\]$", "");
     }
 
     public NFSResponse cd(String targetPath) {
@@ -71,20 +98,23 @@ public class NioFileSystem {
 
     public NFSResponse put(FileMessage msg) {
         try {
+            Path path = filePath.resolve(msg.getName());
             Files.write(
-                Paths.get(msg.getName()),
+                path,
                 msg.getData(),
-                StandardOpenOption.APPEND);
-            return success(msg.getKb() + "kb transferred");
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            return success(msg.getName() + " - " + msg.getKb() + "kb transferred");
         } catch (IOException e) {
+            System.out.println(e.getMessage());
             return error(e.getMessage());
         }
     }
 
-    public NFSResponse transfer(String file, FMCallback callback) {
+    public NFSResponse transfer(String targetPath, FMCallback callback) {
 
         try {
-            RandomAccessFile aFile = new RandomAccessFile(file, "r");
+            Path path = filePath.resolve(targetPath);
+            RandomAccessFile aFile = new RandomAccessFile(path.toString(), "r");
 
             FileChannel inChannel = aFile.getChannel();
 
@@ -93,7 +123,7 @@ public class NioFileSystem {
             while (inChannel.read(buffer) > 0) {
                 i++;
                 buffer.flip();
-                FileMessage fm = new FileMessage(file, buffer.array(), i);
+                FileMessage fm = new FileMessage(targetPath, buffer.array(), i);
                 callback.call(fm);
                 buffer.clear();
             }
@@ -101,7 +131,7 @@ public class NioFileSystem {
             inChannel.close();
             aFile.close();
 
-            return success("Transferring file " + file);
+            return success("Transferring file " + targetPath);
         } catch (IOException e) {
             return error(e.getMessage());
         }
@@ -121,7 +151,7 @@ public class NioFileSystem {
     }
 
     public boolean isDir(String targetPath) {
-        Path path = filePath.resolve(targetPath);
+        Path path = filePath.resolve(trimBrackets(targetPath));
         return Files.isDirectory(path);
     }
 }
