@@ -13,10 +13,11 @@ public class FileMessage extends Message {
     private final byte[] data;
     private final int kb;
 
-    public FileMessage(String name, byte[] data, int kb) throws IOException {
+    public FileMessage(String name, byte[] data, int kb, String username) throws IOException {
         this.name = name;
         this.data = data;
         this.kb = kb;
+        this.username = username;
     }
 
     public String getName() {

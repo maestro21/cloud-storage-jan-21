@@ -8,9 +8,9 @@ public class FileSystemApplication extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Parent parent = FXMLLoader.load(getClass().getResource("fileSystemLayout.fxml"));
+        Parent parent = FXMLLoader.load(getClass().getResource("login.fxml"));
         primaryStage.setScene(new Scene(parent));
-        primaryStage.setTitle("Client-Server file system");
+        primaryStage.setTitle("Облачное хранилище");
         primaryStage.show();
     }
 }
