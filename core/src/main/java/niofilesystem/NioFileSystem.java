@@ -42,7 +42,6 @@ public class NioFileSystem {
                 .sorted(this::sortDirsFirstThenByName)
                 .map(this::getFileName)
                 .collect(Collectors.joining(", "));
-            System.out.println(filePath.toString() +  " " + Paths.get(rootPath).toString());
             if(!filePath.toString().equals(Paths.get(rootPath).toString())) files = "..," + files;
             return new NFSResponse("Список файлов в директории " + filePath.toString(), files);
         } catch (IOException e) {
@@ -113,7 +112,6 @@ public class NioFileSystem {
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             return success(msg.getName() + " - " + msg.getKb() + "kb переслали");
         } catch (IOException e) {
-            System.out.println(e.getMessage());
             return error(e.getMessage());
         }
     }
@@ -149,6 +147,18 @@ public class NioFileSystem {
         }
     }
 
+    public NFSResponse mkDir(String targetPath) {
+        try {
+            Path path = filePath.resolve(targetPath);
+            Files.createDirectory(path);
+            return success("Директория " + targetPath + " создана успешно");
+        } catch(FileAlreadyExistsException e){
+            return error("Файл или директория уже существуют");
+        } catch (IOException e) {
+            return error(e.getMessage());
+        }
+    }
+
 
     public NFSResponse touch(String targetPath) {
         try {
@@ -162,9 +172,38 @@ public class NioFileSystem {
         }
     }
 
+    public NFSResponse rm(String targetPath) {
+        try {
+            Path path = filePath.resolve(targetPath);
+            Files.delete(path);
+            return success("Файл " + targetPath + " успешно удален");
+        } catch(DirectoryNotEmptyException e){
+            return error("Директорию нельзя удалить, т.к. в ней есть файлы");
+        } catch(NoSuchFileException e){
+            return error("Файл или директория не существует");
+        } catch (IOException e) {
+            return error(e.getMessage());
+        }
+    }
+
+    public NFSResponse rn(String srcPath, String targetPath) {
+        try {
+            Path pathFrom = filePath.resolve(srcPath);
+            Path pathTo = filePath.resolve(targetPath);
+            Files.move(pathFrom, pathTo);
+            return success("Файл " + srcPath + " успешно переименован в " + targetPath);
+        } catch(DirectoryNotEmptyException e){
+            return error("Директорию нельзя удалить, т.к. в ней есть файлы");
+        } catch(FileAlreadyExistsException e){
+            return error("Файл с таким именем уже существует");
+
+        } catch (IOException|UnsupportedOperationException e) {
+            return error(e.getMessage());
+        }
+    }
+
     public boolean isDir(String targetPath) {
         Path path = filePath.resolve(trimBrackets(targetPath));
-        System.out.println(path);
         return Files.isDirectory(path);
     }
 }

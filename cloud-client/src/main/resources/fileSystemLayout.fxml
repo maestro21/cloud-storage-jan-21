@@ -5,16 +5,22 @@
 <?import javafx.scene.text.*?>
 
 <AnchorPane prefHeight="629.0" prefWidth="600.0" style="-fx-background-color: #000000;" styleClass="scene" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="FileSystemController">
-   <ListView fx:id="listView" layoutX="15.0" layoutY="341.0" prefHeight="226.0" prefWidth="289.0" />
-   <ListView fx:id="clientFileList" layoutX="16.0" layoutY="81.0" prefHeight="204.0" prefWidth="242.0" />
-   <ListView fx:id="serverFileList" layoutX="347.0" layoutY="81.0" prefHeight="204.0" prefWidth="234.0" />
+   <ListView fx:id="listView" layoutX="15.0" layoutY="341.0" prefHeight="226.0" prefWidth="262.0" />
+   <ListView fx:id="clientFileList" layoutX="15.0" layoutY="101.0" prefHeight="204.0" prefWidth="262.0" />
+   <ListView fx:id="serverFileList" layoutX="311.0" layoutY="101.0" prefHeight="204.0" prefWidth="270.0" />
    <Label layoutX="19.0" layoutY="57.0" prefHeight="17.0" prefWidth="100.0" text="Файлы клиента" textFill="#fffafa" />
-   <Label layoutX="415.0" layoutY="57.0" prefHeight="17.0" prefWidth="145.0" text="Файлы на сервере" textFill="WHITE" />
+   <Label layoutX="362.0" layoutY="49.0" prefHeight="17.0" prefWidth="145.0" text="Файлы на сервере" textFill="WHITE" />
    <Label fx:id="title" layoutX="19.0" layoutY="-3.0" prefHeight="35.0" prefWidth="562.0" textFill="WHITE">
       <font>
          <Font size="24.0" />
       </font>
    </Label>
-   <ListView fx:id="serverSharedFileList" layoutX="347.0" layoutY="341.0" prefHeight="226.0" prefWidth="234.0" style="-fx-background-color: #ccc;" />
-   <Label layoutX="347.0" layoutY="297.0" prefHeight="35.0" prefWidth="224.0" text="Общедоступные файлы на сервере" textFill="WHITE" />
+   <ListView fx:id="serverSharedFileList" layoutX="311.0" layoutY="341.0" prefHeight="226.0" prefWidth="270.0" style="-fx-background-color: #ccc;" />
+   <Label layoutX="347.0" layoutY="315.0" prefHeight="17.0" prefWidth="224.0" text="Общедоступные файлы на сервере" textFill="WHITE" />
+   <Button layoutX="310.0" layoutY="74.0" mnemonicParsing="false" onAction="#serverDelFile" text="Удалить" />
+   <Button layoutX="382.0" layoutY="74.0" mnemonicParsing="false" onAction="#serverRenameFile" text="Переименовать" />
+   <Button layoutX="14.0" layoutY="74.0" mnemonicParsing="false" onAction="#clientDelFile" text="Удалить" />
+   <Button layoutX="82.0" layoutY="74.0" mnemonicParsing="false" onAction="#clientRenameFile" text="Переименовать" />
+   <Button layoutX="194.0" layoutY="74.0" mnemonicParsing="false" onAction="#clientMkDir" text="Созд. Папку" />
+   <Button layoutX="499.0" layoutY="74.0" mnemonicParsing="false" onAction="#serverMkDir" text="Созд. Папку" />
 </AnchorPane>

@@ -47,6 +47,8 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
         ChannelHandlerContext ctx = clients.get(msg.getUsername());
         if(ctx != null) {
             ctx.writeAndFlush(msg);
+        } else {
+            System.out.println("NO CONTEXT " + msg.getUsername());
         }
     }
 
@@ -93,10 +95,35 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
                 if (fs.isDir(fileName)) {
                    response = fs.cd(fileName);
                 } else {
-                    response = fs.transfer(fileName, this::writeToChannel);
+                    response = fs.transfer(fileName, this::writeToChannel, msg.getUsername());
                 }
             }
         }
+
+        if (command.startsWith("rm")) {
+            if (args.length != 2) {
+                response = fs.error("Должно быть только 2 аргумента");
+            } else {
+                response = fs.rm(args[1]);
+            }
+        }
+
+        if (command.startsWith("rn")) {
+            if (args.length != 3) {
+                response = fs.error("Должно быть только 3 аргумента");
+            } else {
+                response = fs.rn(args[1], args[2]);
+            }
+        }
+
+        if (command.startsWith("mkdir")) {
+            if (args.length != 2) {
+                response = fs.error("Должно быть только 2 аргумента");
+            } else {
+                response = fs.mkDir(args[1]);
+            }
+        }
+
         return response;
     }
 
