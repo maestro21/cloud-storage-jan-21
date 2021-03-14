@@ -4,17 +4,17 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane prefHeight="602.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="FileSystemController">
-   <ListView fx:id="listView" layoutX="15.0" layoutY="341.0" prefHeight="250.0" prefWidth="569.0" />
-   <TextField fx:id="text" layoutX="14.0" layoutY="301.0" onAction="#sendMessage" prefHeight="36.0" prefWidth="473.0" />
-   <Button layoutX="496.0" layoutY="301.0" mnemonicParsing="false" onAction="#sendMessage" prefHeight="36.0" prefWidth="90.0" text="Отправить" />
-   <ListView fx:id="clientFileList" layoutX="16.0" layoutY="52.0" prefHeight="233.0" prefWidth="270.0" />
-   <ListView fx:id="serverFileList" layoutX="311.0" layoutY="52.0" prefHeight="233.0" prefWidth="270.0" />
-   <Label layoutX="30.0" layoutY="31.0" prefHeight="17.0" prefWidth="75.0" text="Client files" />
-   <Label layoutX="487.0" layoutY="31.0" prefHeight="17.0" prefWidth="83.0" text="Server files" />
-   <Label fx:id="nickname" layoutX="272.0" layoutY="14.0">
+<AnchorPane prefHeight="629.0" prefWidth="600.0" style="-fx-background-color: #000000;" styleClass="scene" stylesheets="@style.css" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="FileSystemController">
+   <ListView fx:id="listView" layoutX="15.0" layoutY="341.0" prefHeight="226.0" prefWidth="289.0" />
+   <ListView fx:id="clientFileList" layoutX="16.0" layoutY="81.0" prefHeight="204.0" prefWidth="242.0" />
+   <ListView fx:id="serverFileList" layoutX="347.0" layoutY="81.0" prefHeight="204.0" prefWidth="234.0" />
+   <Label layoutX="19.0" layoutY="57.0" prefHeight="17.0" prefWidth="100.0" text="Файлы клиента" textFill="#fffafa" />
+   <Label layoutX="415.0" layoutY="57.0" prefHeight="17.0" prefWidth="145.0" text="Файлы на сервере" textFill="WHITE" />
+   <Label fx:id="title" layoutX="19.0" layoutY="-3.0" prefHeight="35.0" prefWidth="562.0" textFill="WHITE">
       <font>
          <Font size="24.0" />
       </font>
    </Label>
+   <ListView fx:id="serverSharedFileList" layoutX="347.0" layoutY="341.0" prefHeight="226.0" prefWidth="234.0" style="-fx-background-color: #ccc;" />
+   <Label layoutX="347.0" layoutY="297.0" prefHeight="35.0" prefWidth="224.0" text="Общедоступные файлы на сервере" textFill="WHITE" />
 </AnchorPane>

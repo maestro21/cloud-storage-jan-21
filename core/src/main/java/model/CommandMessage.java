@@ -6,8 +6,9 @@ public class CommandMessage extends Message {
 
     private final String content;
 
-    public CommandMessage(String content) {
+    public CommandMessage(String content, String username) {
         this.content = content;
+        this.username = username;
     }
 
     public String getContent() {

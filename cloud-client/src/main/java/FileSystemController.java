@@ -24,10 +24,12 @@ public class FileSystemController implements Initializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FileSystemController.class);
 
-    public Label nickname;
+    public Label title;
+    public String username;
     public ListView<String> listView;
     public ListView<String> clientFileList;
     public ListView<String> serverFileList;
+    public ListView<String> serverSharedFileList;
     final private NioFileSystem fs = new NioFileSystem("filesClient");;
 
     public TextField text;
@@ -45,59 +47,80 @@ public class FileSystemController implements Initializable {
         try {
             os.writeObject(fm);
             os.flush();
-            addMessage("Uploading " + fm.getName() + ": " + fm.getKb() + "kb transferred");
+            addMessage("Загружаем " + fm.getName() + ": " + fm.getKb() + "kb загружено");
         } catch (IOException e) {
-            addMessage("Error occurred on upload" + fm.getName() + ": " + e.getMessage());
+            addMessage("Возникла ошибка при загрузке: " + fm.getName() + ": " + e.getMessage());
         }
     }
 
     private void sendMessageToServer(String msg)  {
         try {
-            os.writeObject(new CommandMessage(msg));
+            os.writeObject(new CommandMessage(msg, this.username));
             os.flush();
-            addMessage("Sent command to server: " + msg);
+            addMessage("Отправили команду на сервер: " + msg);
         } catch (IOException e) {
-            addMessage("Error occurred: " + e.getMessage());
+            addMessage("Возникла ошибка: " + e.getMessage());
         }
     }
 
-    public String getNickname() {
-        return this.nickname.getText();
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname.setText(nickname);
+    private void sendSharedRequestToServer(String msg)  {
+        try {
+            os.writeObject(new CommandMessage(msg, "public"));
+            os.flush();
+            addMessage("Отправили команду на сервер: " + msg);
+        } catch (IOException e) {
+            addMessage("Возникла ошибка: " + e.getMessage());
+        }
     }
 
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         NFSResponse resp = fs.ls();
-        // display client file list
+        // отображаем список файлов клиента.
         updateFileList(clientFileList, resp.getFilesList());
         bindMouseClicks();
         bindConnection();
-        // retrieve from server root dir file list
-        sendMessageToServer("ls");
     }
 
+    public void init(String username) {
+        this.username = username;
+        this.title.setText("Облачное хранилище пользователя " + username);
+        // отправляем команду на сервер для получения списка файлов в корневой директории пользователя username
+        sendMessageToServer("ls");
+        sendSharedRequestToServer("ls");
+    }
+
+
     private void bindMouseClicks() {
+        // обрабатываем щелчки по списку файлов клиента
         clientFileList.setOnMouseClicked(a -> {
             if (a.getClickCount() == 2) {
                 String fileName = clientFileList.getSelectionModel().getSelectedItem();
+                //  если это директория - открываем ее
                 if(fs.isDir(fileName)) {
-                    sendMessageToServer("cat " + fs.trimBrackets(fileName));
+                    NFSResponse resp = fs.cd(fileName);
+                    updateFileList(clientFileList, resp.getFilesList());
                 } else {
-                   NFSResponse resp = fs.transfer(fileName, this::sendFileToServer);
+                   // если это файл - отправляем его на сервер
+                   NFSResponse resp = fs.transfer(fileName, this::sendFileToServer, this.username);
                    addMessage(resp.getMessage());
                 }
             }
         });
 
+        // обрабатываем щелчки по списку файлов на сервере
         serverFileList.setOnMouseClicked(a -> {
             if (a.getClickCount() == 2) {
                 String fileName = serverFileList.getSelectionModel().getSelectedItem();
                 sendMessageToServer("open " + fileName);
+            }
+        });
+
+        serverSharedFileList.setOnMouseClicked(a -> {
+            if (a.getClickCount() == 2) {
+                String fileName = serverSharedFileList.getSelectionModel().getSelectedItem();
+                sendSharedRequestToServer("open " + fileName);
             }
         });
     }
@@ -127,13 +150,19 @@ public class FileSystemController implements Initializable {
     private void handleResponse(Message msg) {
         if (msg instanceof FileMessage) {
             NFSResponse resp = fs.put((FileMessage) msg);
-            addMessage("Downloading " + resp.getMessage());
+            addMessage("Скачиваем " + resp.getMessage());
         } else if (msg instanceof NFSResponse) {
             String message = ((NFSResponse) msg).getMessage();
             addMessage(message);
             if(((NFSResponse) msg).getFilesList() != null) {
-                updateFileList(serverFileList, ((NFSResponse) msg).getFilesList());
+                if(msg.getUsername().equals("public")) {
+                    updateFileList(serverSharedFileList, ((NFSResponse) msg).getFilesList());
+                } else {
+                    updateFileList(serverFileList, ((NFSResponse) msg).getFilesList());
+                }
             }
+            NFSResponse resp = fs.ls();
+            updateFileList(clientFileList, resp.getFilesList());
         }
     }
 
@@ -147,6 +176,9 @@ public class FileSystemController implements Initializable {
     }
 
     private void addMessage(String msg) {
-        Platform.runLater(() -> listView.getItems().add(msg));
+        Platform.runLater(() -> {
+            listView.getItems().add(msg);
+            listView.scrollTo(listView.getItems().size() - 1);
+        } );
     }
 }

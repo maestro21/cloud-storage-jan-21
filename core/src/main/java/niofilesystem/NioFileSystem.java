@@ -1,16 +1,13 @@
 package niofilesystem;
 
+import com.sun.xml.internal.ws.policy.privateutil.PolicyUtils;
 import model.FileMessage;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
-import java.util.Comparator;
 import java.util.stream.Collectors;
 
 
@@ -20,9 +17,14 @@ public class NioFileSystem {
 
     private Path filePath;
 
-    public NioFileSystem(String rootPath) {
+    public NioFileSystem(String rootPath){
         this.rootPath = rootPath;
         filePath = Paths.get(rootPath);
+        if(!Files.exists(filePath)) {
+            try {
+                Files.createDirectory(filePath);
+            } catch (IOException e) {}
+        }
     }
 
     public NFSResponse success(String msg) {
@@ -31,7 +33,7 @@ public class NioFileSystem {
     }
 
     public NFSResponse error(String msg) {
-        return new NFSResponse("Error occured: " + msg);
+        return new NFSResponse("Ошибка: " + msg);
     }
 
     public NFSResponse ls() {
@@ -40,7 +42,9 @@ public class NioFileSystem {
                 .sorted(this::sortDirsFirstThenByName)
                 .map(this::getFileName)
                 .collect(Collectors.joining(", "));
-            return new NFSResponse("Listing files in directory " + filePath.toString(), files);
+            System.out.println(filePath.toString() +  " " + Paths.get(rootPath).toString());
+            if(!filePath.toString().equals(Paths.get(rootPath).toString())) files = "..," + files;
+            return new NFSResponse("Список файлов в директории " + filePath.toString(), files);
         } catch (IOException e) {
             return error(e.getMessage());
         }
@@ -73,24 +77,28 @@ public class NioFileSystem {
 
     public NFSResponse cd(String targetPath) {
         Path fileDirBefore = filePath;
-        filePath = filePath.resolve(targetPath);
+        if(targetPath.equals("..")) {
+            filePath = filePath.getParent();
+        } else {
+            filePath = filePath.resolve(trimBrackets(targetPath));
+        }
         if (!Files.isDirectory(filePath)) {
             filePath = fileDirBefore;
-            return error(targetPath + " is not a directory");
-        }  else if(!Files.exists(filePath)) {
+            return error(targetPath + " не директория");
+        } else if (!Files.exists(filePath)) {
             filePath = fileDirBefore;
-            return error("Directory " + targetPath + " don`t exist");
+            return error("Директория " + targetPath + " не существует");
         }
-        return success("Successfully changed server path to: " + filePath);
+        return success("Поменяли путь на: " + filePath);
     }
 
     public NFSResponse cat(String targetPath) {
         try {
             Path path = filePath.resolve(targetPath);
             Files.createDirectory(path);
-            return success("Directory " + targetPath + " created successfully");
+            return success("Директория " + targetPath + " успешно создана");
         } catch(FileAlreadyExistsException e){
-            return error("File or directory already exists");
+            return error("Файл или директория не существует");
         } catch (IOException e) {
             return error(e.getMessage());
         }
@@ -103,7 +111,7 @@ public class NioFileSystem {
                 path,
                 msg.getData(),
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            return success(msg.getName() + " - " + msg.getKb() + "kb transferred");
+            return success(msg.getName() + " - " + msg.getKb() + "kb переслали");
         } catch (IOException e) {
             System.out.println(e.getMessage());
             return error(e.getMessage());
@@ -111,6 +119,10 @@ public class NioFileSystem {
     }
 
     public NFSResponse transfer(String targetPath, FMCallback callback) {
+        return transfer(targetPath, callback, "");
+    }
+
+    public NFSResponse transfer(String targetPath, FMCallback callback, String username) {
 
         try {
             Path path = filePath.resolve(targetPath);
@@ -123,7 +135,7 @@ public class NioFileSystem {
             while (inChannel.read(buffer) > 0) {
                 i++;
                 buffer.flip();
-                FileMessage fm = new FileMessage(targetPath, buffer.array(), i);
+                FileMessage fm = new FileMessage(targetPath, buffer.array(), i, username);
                 callback.call(fm);
                 buffer.clear();
             }
@@ -131,7 +143,7 @@ public class NioFileSystem {
             inChannel.close();
             aFile.close();
 
-            return success("Transferring file " + targetPath);
+            return success("Переслали файл " + targetPath);
         } catch (IOException e) {
             return error(e.getMessage());
         }
@@ -142,9 +154,9 @@ public class NioFileSystem {
         try {
             Path path = filePath.resolve(targetPath);
             Files.createFile(path);
-            return success("File " + targetPath + " created successfully");
+            return success("Файл " + targetPath + " создан успешно");
         } catch(FileAlreadyExistsException e){
-            return error("File or directory already exists");
+            return error("Файл или директория уже существуют");
         } catch (IOException e) {
             return error(e.getMessage());
         }
@@ -152,6 +164,7 @@ public class NioFileSystem {
 
     public boolean isDir(String targetPath) {
         Path path = filePath.resolve(trimBrackets(targetPath));
+        System.out.println(path);
         return Files.isDirectory(path);
     }
 }

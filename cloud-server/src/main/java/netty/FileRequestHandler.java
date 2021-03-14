@@ -1,11 +1,7 @@
 package netty;
 
-import java.io.IOException;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -17,43 +13,45 @@ import niofilesystem.NioFileSystem;
 
 public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
-    private static final ConcurrentLinkedDeque<ChannelHandlerContext> clients = new ConcurrentLinkedDeque<>();
-
-    private NioFileSystem fs = new NioFileSystem("filesServer");
-
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        clients.add(ctx);
-    }
+    private static final Map<String,ChannelHandlerContext> clients = new HashMap<String,ChannelHandlerContext>();
+    private static final Map<String,NioFileSystem> fss = new HashMap<String, NioFileSystem>();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws Exception {
         NFSResponse response = null;
+        String username = msg.getUsername();
+        NioFileSystem fs = this.getFileSystem(username);
+        clients.put(username, ctx);
         if (msg instanceof FileMessage) {
             response = fs.put((FileMessage) msg);
         } else if (msg instanceof CommandMessage) {
-            response = handleCommandMessage((CommandMessage) msg);
+            response = handleCommandMessage((CommandMessage) msg, fs);
         }
 
         if(response != null) {
-            writeToChannel(response);
+            response.setUsername(msg.getUsername());
+            ctx.writeAndFlush(response);
         }
     }
 
-    private void writeToChannel(NFSResponse msg) {
-        for (ChannelHandlerContext client : clients) {
-            client.writeAndFlush(msg);
+    private NioFileSystem getFileSystem(String username) {
+        NioFileSystem fs = fss.get(username);
+        if(fs == null) {
+            fs = new NioFileSystem("filesServer/" + username);
+            fss.put(username, fs);
         }
+        return fs;
     }
 
     private void writeToChannel(FileMessage msg) {
-        for (ChannelHandlerContext client : clients) {
-            client.writeAndFlush(msg);
+        ChannelHandlerContext ctx = clients.get(msg.getUsername());
+        if(ctx != null) {
+            ctx.writeAndFlush(msg);
         }
     }
 
 
-    private NFSResponse handleCommandMessage(CommandMessage msg) {
+    private NFSResponse handleCommandMessage(CommandMessage msg, NioFileSystem fs) {
         String command = msg.getContent();
         String[] args = command.split(" ");
         NFSResponse response = new NFSResponse(command);
@@ -64,7 +62,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
         if (command.startsWith("cd")) {
             if (args.length != 2) {
-                response = fs.error("Wrong argument count");
+                response = fs.error("Должно быть только 2 аргумента");
             } else {
                 response = fs.cd(args[1]);
             }
@@ -72,7 +70,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
         if (command.startsWith("cat")) {
             if (args.length != 2) {
-                response = fs.error("Wrong argument count");
+                response = fs.error("Должно быть только 2 аргумента");
             } else {
                 response = fs.cat(args[1]);
             }
@@ -80,7 +78,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
         if (command.startsWith("touch")) {
             if (args.length != 2) {
-                response = fs.error("Wrong argument count");
+                response = fs.error("Должно быть только 2 аргумента");
             } else {
                 response = fs.touch(args[1]);
             }
@@ -88,7 +86,7 @@ public class FileRequestHandler extends SimpleChannelInboundHandler<Message> {
 
         if (command.startsWith("open")) {
             if (args.length != 2) {
-                response = fs.error("Wrong argument count");
+                response = fs.error("Должно быть только 2 аргумента");
             } else {
                 String fileName = args[1];
 
